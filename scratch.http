@@ -1,0 +1,50 @@
+# Be sure to send this request first as it creates a placeholder entry for the attachment to be uploaded to.
+POST http://localhost/documents
+
+> {%
+client.test('Get location header', function () {
+    client.assert(response.headers.valueOf('Location') !== '', 'Missing Location header');
+})
+
+client.test('Response code is 201', function () {
+    client.assert(response.status === 201, 'Expected response code 201, got: ' + response.status);
+})
+
+  var uuid = response.headers.valueOf('Location').split('/');
+  client.global.set('documentUuid', uuid[uuid.length-2]);
+ %}
+
+###
+
+GET http://localhost/documents/{{documentUuid}}
+
+###
+
+# Send this request only after the first POST, otherwise you'll get a 404.
+POST http://localhost/documents/{{documentUuid}}/attachment
+Content-Disposition: attachment; name="document"; filename="doggos.pdf"
+Content-Type: application/pdf
+
+< ./doggos.pdf
+
+###
+
+GET http://localhost/documents
+
+###
+
+GET http://localhost/documents/{{documentUuid}}/attachment
+
+###
+
+GET http://localhost/documents/{{documentUuid}}/attachment/previews
+
+###
+
+DELETE http://localhost/documents/{{documentUuid}}/attachment
+
+###
+
+DELETE http://localhost/documents/{{documentUuid}}
+
+###

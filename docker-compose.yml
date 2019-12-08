@@ -1,0 +1,61 @@
+version: '3'
+services:
+  php-fpm:
+    container_name: php-fpm
+    restart: always
+    build:
+      context: ./.docker/php-fpm
+      dockerfile: Dockerfile
+    expose:
+      - "9000"
+    volumes:
+      - ./:/var/www/html
+      - ./.docker/php-fpm/logs:/var/log/php
+    env_file:
+      - ./.docker/.env
+    networks:
+      - sun
+
+  composer:
+    container_name: composer
+    image: composer
+    volumes:
+      - .:/app
+    env_file:
+      - ./.docker/.env
+    command: install
+    networks:
+      - sun
+
+  nginx:
+    container_name: nginx
+    restart: always
+    build:
+      context: ./.docker/nginx
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+      - ./.docker/nginx/logs:/var/log/nginx
+      - ./.docker/nginx/sites:/etc/nginx/conf.d
+    ports:
+      - "80:80"
+    links:
+      - php-fpm
+    networks:
+      - sun
+
+  db:
+    image: postgres:11
+    restart: always
+    env_file:
+      - ./.docker/.env
+    ports:
+      - 5432:5432
+    volumes:
+      - ./.docker/postgres:/docker-entrypoint-initdb.d/
+    networks:
+      - sun
+
+networks:
+  sun:
+    driver: bridge
