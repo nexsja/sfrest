@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Preview;
 use App\Entity\Document;
+use App\Exception\InvalidUploadedFileException;
 use App\Service\UploadService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -14,21 +15,12 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Symfony\Component\Validator\Constraints\File;
-use Symfony\Component\Validator\ConstraintViolationInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * @Route(path="/documents", name="documents_")
  */
 class DocumentController extends AbstractController
 {
-    /**
-     * Arbitrary file size because why not
-     * @var int
-     */
-    const DOCUMENT_MAX_SIZE = 5*1024*1024;
-
     /**
      * @Route(methods={"GET"})
      * @param EntityManagerInterface $entityManager
@@ -77,39 +69,17 @@ class DocumentController extends AbstractController
      * @param Document $document
      * @param Request $request
      * @param UploadService $uploadService
-     * @param ValidatorInterface $validator
      * @return Response
      */
-    public function postDocumentAttachment(
-        Document $document,
-        Request $request,
-        UploadService $uploadService,
-        ValidatorInterface $validator
-    ) {
-        $file = $uploadService->createUploadedFile($request->getContent());
-
-        $constraint = new File();
-        $constraint->maxSize = self::DOCUMENT_MAX_SIZE;
-        $constraint->mimeTypes = ['application/pdf', 'application/x-pdf'];
-
-        $violations = $validator->validate($file, $constraint);
-
-        if ($violations->count() > 0) {
-            $return = [
-                'errors' => []
-            ];
-            foreach ($violations as $violation) {
-                /** @var $violation ConstraintViolationInterface */
-                $return['errors'][$violation->getCode()] = $violation->getMessage();
-            }
-            return $this->json($return, Response::HTTP_BAD_REQUEST);
+    public function postDocumentAttachment(Document $document, Request $request, UploadService $uploadService) {
+        try {
+            $uploadService->uploadDataToFile($request->getContent(), $document);
+        } catch (InvalidUploadedFileException $e) {
+            return $this->json(['errors' => $e->getErrors()], Response::HTTP_BAD_REQUEST);
         }
-
-        $uploadService->uploadFile($file, $document);
 
         return new Response(null, Response::HTTP_CREATED);
     }
-
 
     /**
      * @Route(path="/{document}", methods={"GET"}, name="document")

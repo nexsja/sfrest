@@ -4,6 +4,7 @@ namespace spec\App\Service;
 
 use App\Entity\Document;
 use App\Event\FileUploaded;
+use App\Service\AttachmentValidatorService;
 use App\Service\UploadService;
 use PhpSpec\ObjectBehavior;
 use Prophecy\Argument;
@@ -17,20 +18,20 @@ class UploadServiceSpec extends ObjectBehavior
         $this->shouldHaveType(UploadService::class);
     }
 
-    function it_should_upload_file(File $file, Document $document, EventDispatcherInterface $dispatcher)
+    function it_should_upload_file(Document $document, EventDispatcherInterface $dispatcher, AttachmentValidatorService $validatorService)
     {
         $dispatcher->beADoubleOf(EventDispatcherInterface::class);
-        $this->beConstructedWith('some/path', $dispatcher);
+        $validatorService->beADoubleOf(AttachmentValidatorService::class);
+        $this->beConstructedWith('some/path', $dispatcher, $validatorService);
 
-        $file->beConstructedWith(['some/path', false]);
-        $file->move(Argument::type('string'), Argument::type('string'))->shouldBeCalled()->willReturn($file);
+        $validatorService->isValid(Argument::type(File::class))->shouldBeCalled()->willReturn(true);
 
         $document->beADoubleOf(Document::class);
-        $document->getId()->shouldBeCalled()->willReturn('some-very-unique-uuid');
+        $document->getId()->shouldBeCalledTimes(2)->willReturn('some-very-unique-uuid');
 
         $dispatcher->dispatch(
             Argument::type(FileUploaded::class), FileUploaded::EVENT_NAME)->shouldBeCalledTimes(1);
 
-        $this->uploadFile($file, $document);
+        $this->uploadDataToFile("definitely a file", $document);
     }
 }

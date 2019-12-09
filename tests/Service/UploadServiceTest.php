@@ -4,25 +4,50 @@ namespace App\Tests\Service;
 
 use App\Entity\Document;
 use App\Event\FileUploaded;
+use App\Exception\InvalidUploadedFileException;
+use App\Service\AttachmentValidatorService;
 use App\Service\UploadService;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\HttpFoundation\File\File;
 
 class UploadServiceTest extends TestCase
 {
+    /**
+     * @var UploadService
+     */
+    private $service;
+
+    /**
+     * @var EventDispatcherInterface|MockObject
+     */
+    private $dispatcher;
+
+    /**
+     * @var AttachmentValidatorService|MockObject
+     */
+    private $validator;
+
+    public function setUp()
+    {
+        $this->dispatcher = $this->createPartialMock(EventDispatcherInterface::class, ['dispatch']);
+        $this->validator = $this->createPartialMock(AttachmentValidatorService::class, ['isValid', 'getViolations']);
+
+        $this->service = new UploadService('some/dir', $this->dispatcher, $this->validator);
+    }
+
     public function testUploadFile()
     {
         //Arrange
-        $dispatcher = $this->createPartialMock(EventDispatcherInterface::class, ['dispatch']);
-        $service = new UploadService('some/dir', $dispatcher);
-        $file = $this->createPartialMock(File::class, ['move']);
         $document = $this->createPartialMock(Document::class, ['getId']);
+        $this->validator->expects($this->once())->method('isValid')->willReturn(true);
+        $this->validator->expects($this->never())->method('getViolations');
+
 
         //Assert
         $document->expects($this->exactly(2))->method('getId')->willReturn('unique-uuid');
-        $file->expects($this->once())->method('move')->willReturn(new File('.env'));
-        $dispatcher->expects($this->once())
+
+        $this->dispatcher->expects($this->once())
             ->method('dispatch')
             ->with(
                 $this->isInstanceOf(FileUploaded::class),
@@ -30,6 +55,20 @@ class UploadServiceTest extends TestCase
             );
 
         //Act
-        $service->uploadFile($file, $document);
+        $this->service->uploadDataToFile("content that's definitely a file", $document);
+    }
+
+    public function testUploadingThrowsException()
+    {
+        //Arrange
+        $this->validator->expects($this->once())->method('isValid')->willReturn(false);
+        $this->validator->expects($this->once())->method('getViolations')->willReturn(['code' => 'bad stuff']);
+
+        //Assert
+        $this->expectException(InvalidUploadedFileException::class);
+        $this->dispatcher->expects($this->never())->method('dispatch');
+
+        //Act
+        $this->service->uploadDataToFile("content that's definitely a file", new Document());
     }
 }
