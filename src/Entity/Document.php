@@ -39,12 +39,4 @@ class Document
         $this->previews = new ArrayCollection();
         return $this;
     }
-
-    public function addPreview(Preview $attachment)
-    {
-        if (!$this->previews->contains($attachment)) {
-            $this->previews->add($attachment);
-            $attachment->setDocument($this);
-        }
-    }
 }

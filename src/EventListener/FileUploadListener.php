@@ -59,17 +59,13 @@ class FileUploadListener implements EventSubscriberInterface
 
             foreach ($files as $file) {
                 /** @var \SplFileInfo $file */
-                $attachment = new Preview();
-                $attachment
-                    ->setDocument($event->getDocument())
-                    ->setImage($file->getBasename())
-                    // the first file in array is also the first file in the document
-                    // because they are sorted by name and the extractor adds the index in which the images occur
-                    // in the document
-                    ->setThumbnail((int) filter_var($file->getBasename(), FILTER_SANITIZE_NUMBER_INT) == 0)
-                ;
+                // the first file in array is also the first file in the document
+                // because they are sorted by name and the extractor adds the index in which the images occur
+                // in the document
+                $isThumbnail = (int)filter_var($file->getBasename(), FILTER_SANITIZE_NUMBER_INT) == 0;
+                $preview = new Preview($event->getDocument(), $file->getBasename(), $isThumbnail);
 
-                $this->entityManager->persist($attachment);
+                $this->entityManager->persist($preview);
             }
 
             $this->entityManager->flush();

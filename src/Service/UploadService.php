@@ -26,11 +26,11 @@ class UploadService
         $this->eventDispatcher = $eventDispatcher;
     }
 
-    public static function createUploadedFile($base64Content)
+    public static function createUploadedFile($content)
     {
         $filePath = tempnam(sys_get_temp_dir(), 'UploadedFile');
         $file = fopen($filePath, "w");
-        fwrite($file, $base64Content);
+        fwrite($file, $content);
         $meta_data = stream_get_meta_data($file);
         $path = $meta_data['uri'];
         fclose($file);

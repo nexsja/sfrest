@@ -35,23 +35,19 @@ class Preview
      */
     private $isThumbnail = false;
 
+    public function __construct(Document $document, string $image, bool $isThumbnail = false)
+    {
+        $this->document = $document;
+        $this->image = $image;
+        $this->isThumbnail = $isThumbnail;
+    }
+
     /**
      * @return Document
      */
     public function getDocument()
     {
         return $this->document;
-    }
-
-    /**
-     * @param Document $document
-     * @return Preview
-     */
-    public function setDocument(Document $document): self
-    {
-        $this->document = $document;
-        $document->addPreview($this);
-        return $this;
     }
 
     /**
@@ -63,16 +59,6 @@ class Preview
     }
 
     /**
-     * @param string $image
-     * @return Preview
-     */
-    public function setImage(string $image): self
-    {
-        $this->image = $image;
-        return $this;
-    }
-
-    /**
      * Method used during serialization
      *
      * @return bool
@@ -80,15 +66,5 @@ class Preview
     public function isThumbnail(): bool
     {
         return $this->isThumbnail;
-    }
-
-    /**
-     * @param bool $isThumbnail
-     * @return Preview
-     */
-    public function setThumbnail(bool $isThumbnail): Preview
-    {
-        $this->isThumbnail = $isThumbnail;
-        return $this;
     }
 }
